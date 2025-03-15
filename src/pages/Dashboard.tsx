@@ -4,16 +4,28 @@ import Header from '@/components/Header';
 import Dashboard from '@/components/Dashboard';
 import MoodTracker from '@/components/MoodTracker';
 import MoodInsights from '@/components/MoodInsights';
+import AiCorrelation from '@/components/AiCorrelation';
+import FocusTimer from '@/components/FocusTimer';
 import Footer from '@/components/Footer';
 import { motion } from 'framer-motion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { InfoIcon } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardPage = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   useEffect(() => {
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      navigate('/sign-in');
+    }
+    
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
-  }, []);
+  }, [isAuthenticated, navigate]);
 
   // Animation variants for staggered content
   const containerVariants = {
@@ -65,13 +77,15 @@ const DashboardPage = () => {
             className="lg:col-span-1 space-y-6"
           >
             <MoodTracker />
+            <FocusTimer />
             <MoodInsights />
           </motion.div>
           <motion.div 
             variants={itemVariants}
-            className="lg:col-span-2"
+            className="lg:col-span-2 space-y-6"
           >
             <Dashboard />
+            <AiCorrelation />
           </motion.div>
         </motion.div>
       </main>

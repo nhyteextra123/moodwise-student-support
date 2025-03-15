@@ -1,19 +1,24 @@
 
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, Settings, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navigation = [
     { name: 'Home', href: '/' },
     { name: 'Dashboard', href: '/dashboard' },
     { name: 'Chat', href: '/chat' },
+    { name: 'Teacher Insights', href: '/teacher-insights' },
   ];
 
   useEffect(() => {
@@ -28,6 +33,12 @@ const Header = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+    navigate('/');
+  };
 
   return (
     <header
@@ -68,9 +79,32 @@ const Header = () => {
             ))}
           </div>
           
-          <Button className="button-primary">
-            Sign In
-          </Button>
+          {isAuthenticated ? (
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate('/settings')}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+              <Button onClick={handleLogout} variant="destructive" size="sm">
+                <LogOut className="h-4 w-4 mr-1" />
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => navigate('/sign-up')}>
+                Sign Up
+              </Button>
+              <Button onClick={() => navigate('/sign-in')}>
+                <LogIn className="h-4 w-4 mr-1" />
+                Sign In
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -108,10 +142,34 @@ const Header = () => {
                 {item.name}
               </Link>
             ))}
-            <div className="pt-2">
-              <Button className="button-primary w-full">
-                Sign In
-              </Button>
+            
+            <div className="pt-4 border-t space-y-3">
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    to="/settings"
+                    className="flex items-center gap-2 py-2 px-3 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <Settings className="h-5 w-5" />
+                    Settings
+                  </Link>
+                  <Button onClick={handleLogout} variant="destructive" className="w-full justify-start">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button onClick={() => navigate('/sign-in')} className="w-full justify-start">
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Sign In
+                  </Button>
+                  <Button onClick={() => navigate('/sign-up')} variant="outline" className="w-full justify-start">
+                    <User className="h-4 w-4 mr-2" />
+                    Sign Up
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
