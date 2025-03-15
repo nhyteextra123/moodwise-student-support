@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,10 +23,10 @@ const initialMessages: Message[] = [
   }
 ];
 
-type ConversationHistory = {
+type ConversationHistory = Array<{
   role: 'user' | 'assistant';
   content: string;
-}[];
+}>;
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -88,7 +87,7 @@ const ChatInterface = () => {
     setIsTyping(true);
     
     // Update conversation history
-    const updatedHistory = [
+    const updatedHistory: ConversationHistory = [
       ...conversationHistory,
       { role: 'user', content: messageText }
     ];
