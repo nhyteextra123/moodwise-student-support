@@ -2,8 +2,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Sparkles, User, Loader2 } from 'lucide-react';
+import { Send, Sparkles, User, Loader2, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { generateAIResponse } from '@/utils/openai';
+import ApiKeyModal from '@/components/ApiKeyModal';
+import { useToast } from '@/hooks/use-toast';
 
 type Message = {
   id: string;
@@ -21,11 +24,19 @@ const initialMessages: Message[] = [
   }
 ];
 
+type ConversationHistory = {
+  role: 'user' | 'assistant';
+  content: string;
+}[];
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState<ConversationHistory>([]);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
   
   // Mood suggestions that appear as chips
   const moodSuggestions = [
@@ -35,6 +46,22 @@ const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Check if API key exists on component mount
+    const apiKey = localStorage.getItem('openai_api_key');
+    if (!apiKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please add your OpenAI API key to enable AI chat responses.",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => setApiKeyModalOpen(true)}>
+            Add Key
+          </Button>
+        ),
+      });
+    }
+  }, [toast]);
 
   const scrollToBottom = () => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -60,34 +87,45 @@ const ChatInterface = () => {
     setInput('');
     setIsTyping(true);
     
-    // Simulate AI thinking
-    setTimeout(() => {
-      // Generate AI response based on mood
-      let response = '';
-      const lowerCaseMsg = messageText.toLowerCase();
-      
-      if (lowerCaseMsg.includes('happy') || lowerCaseMsg.includes('good') || lowerCaseMsg.includes('great')) {
-        response = "That's wonderful to hear! When you're in a positive mood, it's a great time to tackle challenging tasks. Would you like some suggestions for making the most of your productive state?";
-      } else if (lowerCaseMsg.includes('stress') || lowerCaseMsg.includes('anxious') || lowerCaseMsg.includes('worried')) {
-        response = "I'm sorry to hear you're feeling stressed. This can definitely impact your focus and learning. Would you like to try a quick 2-minute breathing exercise that can help reduce anxiety?";
-      } else if (lowerCaseMsg.includes('tired') || lowerCaseMsg.includes('exhausted')) {
-        response = "Feeling tired can make studying difficult. Consider taking a short 20-minute power nap or going for a brief walk outside. Studies show both can improve alertness. Would you like more energy-boosting tips?";
-      } else if (lowerCaseMsg.includes('motivated')) {
-        response = "It's great that you're feeling motivated! This is a perfect time to work on your most challenging assignments or start projects you've been putting off. Would you like me to help you prioritize your tasks?";
-      } else {
-        response = "Thanks for sharing how you're feeling. Your emotional state can significantly impact your learning. Would you like some personalized suggestions based on your current mood?";
-      }
-      
+    // Update conversation history
+    const updatedHistory = [
+      ...conversationHistory,
+      { role: 'user', content: messageText }
+    ];
+    
+    setConversationHistory(updatedHistory);
+    
+    // Get AI response
+    const response = await generateAIResponse(messageText, updatedHistory);
+    
+    if (response.success) {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: response,
+        content: response.message,
         sender: 'ai',
         timestamp: new Date()
       };
       
       setMessages(msgs => [...msgs, aiMessage]);
-      setIsTyping(false);
-    }, 1500);
+      
+      // Update conversation history with AI response
+      setConversationHistory([
+        ...updatedHistory,
+        { role: 'assistant', content: response.message }
+      ]);
+    } else {
+      // Show error message
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `I'm having trouble connecting to my AI. ${response.message}`,
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      
+      setMessages(msgs => [...msgs, aiMessage]);
+    }
+    
+    setIsTyping(false);
   };
 
   const handleMoodSelect = (mood: string) => {
@@ -97,7 +135,7 @@ const ChatInterface = () => {
   return (
     <div className="flex flex-col h-full bg-muted/20 rounded-xl overflow-hidden border shadow-subtle">
       {/* Chat header */}
-      <div className="bg-card p-4 border-b">
+      <div className="bg-card p-4 border-b flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-full bg-mindtrack-blue flex items-center justify-center">
             <Sparkles className="h-4 w-4 text-white" />
@@ -107,6 +145,14 @@ const ChatInterface = () => {
             <p className="text-xs text-muted-foreground">AI-powered support for your academic journey</p>
           </div>
         </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setApiKeyModalOpen(true)}
+          title="API Settings"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
       </div>
       
       {/* Chat messages */}
@@ -197,6 +243,9 @@ const ChatInterface = () => {
           <Send className="h-4 w-4" />
         </Button>
       </form>
+
+      {/* API Key Modal */}
+      <ApiKeyModal open={apiKeyModalOpen} onOpenChange={setApiKeyModalOpen} />
     </div>
   );
 };
