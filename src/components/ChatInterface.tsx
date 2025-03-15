@@ -8,14 +8,16 @@ import { generateAIResponse } from '@/utils/openai';
 import ApiKeyModal from '@/components/ApiKeyModal';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
-import ChatBubble from '@/components/ChatBubble';
+import ChatBubble, { Message } from '@/components/ChatBubble';
 
-type Message = {
-  id: string;
-  content: string;
-  sender: 'user' | 'ai';
-  timestamp: Date;
+type ChatInterfaceProps = {
+  onMessagesUpdate?: (messages: Message[]) => void;
 };
+
+type ConversationHistory = Array<{
+  role: 'user' | 'assistant';
+  content: string;
+}>;
 
 const initialMessages: Message[] = [
   {
@@ -26,12 +28,7 @@ const initialMessages: Message[] = [
   }
 ];
 
-type ConversationHistory = Array<{
-  role: 'user' | 'assistant';
-  content: string;
-}>;
-
-const ChatInterface = () => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onMessagesUpdate }) => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -47,7 +44,11 @@ const ChatInterface = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+    // Call the onMessagesUpdate callback whenever messages change
+    if (onMessagesUpdate) {
+      onMessagesUpdate(messages);
+    }
+  }, [messages, onMessagesUpdate]);
 
   useEffect(() => {
     // Check if API key exists on component mount
