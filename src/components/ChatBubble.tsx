@@ -3,13 +3,15 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Sparkles, User } from 'lucide-react';
 
+export type Message = {
+  id: string;
+  content: string;
+  sender: 'user' | 'ai';
+  timestamp: Date;
+};
+
 type ChatBubbleProps = {
-  message: {
-    id: string;
-    content: string;
-    sender: 'user' | 'ai';
-    timestamp: Date;
-  };
+  message: Message;
 };
 
 const ChatBubble: React.FC<ChatBubbleProps> = ({ message }) => {
