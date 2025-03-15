@@ -1,11 +1,14 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, Sparkles, User, Loader2, Settings } from 'lucide-react';
+import { Send, Sparkles, User, Loader2, Settings, Save, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateAIResponse } from '@/utils/openai';
 import ApiKeyModal from '@/components/ApiKeyModal';
 import { useToast } from '@/hooks/use-toast';
+import { motion } from 'framer-motion';
+import ChatBubble from '@/components/ChatBubble';
 
 type Message = {
   id: string;
@@ -131,6 +134,31 @@ const ChatInterface = () => {
     handleSend({ target: mood, preventDefault: () => {} } as any);
   };
 
+  const saveConversation = () => {
+    // Create a file to download with the chat history
+    const chatData = {
+      messages: messages,
+      timestamp: new Date().toISOString(),
+    };
+    
+    const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mindtrack-chat-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Chat Saved",
+      description: "Your conversation has been downloaded successfully.",
+    });
+  };
+
   return (
     <div className="flex flex-col h-full bg-muted/20 rounded-xl overflow-hidden border shadow-subtle">
       {/* Chat header */}
@@ -144,52 +172,46 @@ const ChatInterface = () => {
             <p className="text-xs text-muted-foreground">AI-powered support for your academic journey</p>
           </div>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => setApiKeyModalOpen(true)}
-          title="API Settings"
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={saveConversation}
+            title="Save Chat"
+            className="text-mindtrack-blue hover:text-mindtrack-blue/80 hover:bg-mindtrack-blue/10"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setApiKeyModalOpen(true)}
+            title="API Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div 
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-muted/10 to-background/20">
+        {messages.map((message, index) => (
+          <motion.div
             key={message.id}
-            className={cn(
-              "flex items-start gap-3 animate-fade-in",
-              message.sender === 'user' ? "flex-row-reverse" : ""
-            )}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 * Math.min(index, 5) }}
           >
-            <div className={cn(
-              "h-8 w-8 rounded-full flex-shrink-0 flex items-center justify-center",
-              message.sender === 'user' 
-                ? "bg-mindtrack-purple" 
-                : "bg-mindtrack-blue"
-            )}>
-              {message.sender === 'user' ? (
-                <User className="h-4 w-4 text-white" />
-              ) : (
-                <Sparkles className="h-4 w-4 text-white" />
-              )}
-            </div>
-            
-            <div className={cn(
-              "rounded-2xl px-4 py-3 max-w-[80%] text-sm",
-              message.sender === 'user' 
-                ? "bg-mindtrack-purple/10 rounded-tr-none" 
-                : "bg-mindtrack-blue/10 rounded-tl-none"
-            )}>
-              {message.content}
-            </div>
-          </div>
+            <ChatBubble message={message} />
+          </motion.div>
         ))}
         
         {isTyping && (
-          <div className="flex items-start gap-3">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-3"
+          >
             <div className="h-8 w-8 rounded-full bg-mindtrack-blue flex-shrink-0 flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-white" />
             </div>
@@ -197,7 +219,7 @@ const ChatInterface = () => {
               <Loader2 className="h-4 w-4 animate-spin text-mindtrack-blue" />
               <span className="text-sm">Thinking...</span>
             </div>
-          </div>
+          </motion.div>
         )}
         
         <div ref={endOfMessagesRef} />
@@ -205,24 +227,35 @@ const ChatInterface = () => {
       
       {/* Quick mood selections */}
       {messages.length <= 2 && (
-        <div className="p-4 border-t bg-card">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+          className="p-4 border-t bg-card"
+        >
           <div className="mb-2">
             <p className="text-sm text-muted-foreground">How are you feeling today?</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            {moodSuggestions.map(mood => (
-              <Button 
+            {moodSuggestions.map((mood, index) => (
+              <motion.div
                 key={mood}
-                variant="outline" 
-                size="sm" 
-                onClick={() => handleMoodSelect(mood)}
-                className="rounded-full text-sm hover:bg-primary/10 hover:text-primary transition-colors"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6 + index * 0.1, duration: 0.3 }}
               >
-                {mood}
-              </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleMoodSelect(mood)}
+                  className="rounded-full text-sm hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  {mood}
+                </Button>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
       
       {/* Input area */}
